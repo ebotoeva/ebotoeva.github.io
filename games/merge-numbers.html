@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Drop</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #12121f;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 2rem; color: #f0d060; letter-spacing: 3px; margin-bottom: 14px; }
+
+    .header {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .score-box { text-align: center; }
+    .score-box .lbl { font-size: 0.6rem; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+    .score-box .val { font-size: 1.6rem; font-weight: bold; color: #f0d060; min-width: 60px; }
+    .next-box { text-align: center; }
+    .next-box .lbl { font-size: 0.6rem; text-transform: uppercase; color: #888; letter-spacing: 1px; margin-bottom: 4px; }
+    .tile-preview {
+      width: 54px; height: 54px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 1.2rem; color: #12121f;
+      margin: auto;
+    }
+
+    .game-wrap { display: flex; flex-direction: column; align-items: flex-start; }
+
+    /* Drop row sits directly above the grid */
+    .drop-row {
+      display: flex;
+      gap: 4px;
+      padding: 0 8px;
+      margin-bottom: 5px;
+    }
+    .drop-cell {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 1.3rem; color: #12121f;
+    }
+    .drop-cell.empty  { background: transparent; }
+    .drop-cell.full   { background: transparent; opacity: 0.2; }
+
+    .grid {
+      background: #0a0a18;
+      border-radius: 10px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(6, 64px);
+      gap: 4px;
+      position: relative;
+    }
+    .cell {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 1.2rem;
+      background: #1c1c30;
+      color: #12121f;
+    }
+    .cell.col-hl  { background: #22223a; }
+    .cell.ghost   { opacity: 0.25; }
+
+    .hint { margin-top: 14px; font-size: 0.78rem; color: #555; text-align: center; }
+    .btn {
+      margin-top: 12px;
+      background: #f0d060; color: #12121f;
+      border: none; border-radius: 6px;
+      padding: 10px 22px; font-size: 0.9rem; font-weight: bold; cursor: pointer;
+    }
+    .btn:hover { background: #f8e080; }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; z-index: 10;
+    }
+    .overlay.hidden { display: none; }
+    .overlay .msg { font-size: 2.2rem; font-weight: bold; color: #f0d060; }
+    .overlay .sub { font-size: 1rem; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<h1>NUMBER DROP</h1>
+
+<div class="header">
+  <div class="score-box">
+    <div class="lbl">Score</div>
+    <div class="val" id="score">0</div>
+  </div>
+  <div class="score-box">
+    <div class="lbl">Best</div>
+    <div class="val" id="best">0</div>
+  </div>
+  <div class="next-box">
+    <div class="lbl">Next</div>
+    <div class="tile-preview" id="next-tile">2</div>
+  </div>
+</div>
+
+<div class="game-wrap">
+  <div class="drop-row" id="drop-row"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<p class="hint">← → to move &nbsp;·&nbsp; ↓ or Space to drop</p>
+<button class="btn" onclick="newGame()">New Game</button>
+
+<div class="overlay hidden" id="overlay">
+  <div class="msg">Game Over!</div>
+  <div class="sub" id="final-score"></div>
+  <button class="btn" onclick="newGame()">Play Again</button>
+</div>
+
+<script>
+const COLS = 6;
+const ROWS = 8;
+const POOL = [2,2,2,2,2,4,4,4,4,8,8,8,16,16,32];
+
+function tileColor(val) {
+  const map = {
+    2: '#4d9fff', 4: '#a855f7', 8: '#f87171',
+    16: '#fb923c', 32: '#22d3ee', 64: '#f472b6',
+    128: '#facc15', 256: '#4ade80', 512: '#f97316',
+    1024: '#818cf8', 2048: '#fbbf24',
+  };
+  return map[val] ?? `hsl(${(Math.log2(val) * 40) % 360},70%,60%)`;
+}
+
+let grid, current, next, col, score, best = 0;
+
+function rand() { return POOL[Math.floor(Math.random() * POOL.length)]; }
+
+function newGame() {
+  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  current = rand();
+  next    = rand();
+  col     = Math.floor(COLS / 2);
+  score   = 0;
+  document.getElementById('overlay').classList.add('hidden');
+  render();
+}
+
+// Returns the row index where the current tile would land in column c (-1 if full).
+function landingRow(c) {
+  for (let r = ROWS - 1; r >= 0; r--)
+    if (grid[r][c] === 0) return r;
+  return -1;
+}
+
+function drop() {
+  const row = landingRow(col);
+  if (row === -1) return; // column full — user must pick another
+
+  grid[row][col] = current;
+  mergeAt(row, col);
+
+  current = next;
+  next    = rand();
+  col     = Math.floor(COLS / 2);
+  best    = Math.max(best, score);
+
+  render();
+
+  if (grid[0].every(v => v !== 0)) {
+    document.getElementById('final-score').textContent = `Final score: ${score}`;
+    document.getElementById('overlay').classList.remove('hidden');
+  }
+}
+
+// Shift the column above clearedRow down by one (fill the gap left by a merge).
+function gravityCol(c, clearedRow) {
+  for (let r = clearedRow; r > 0; r--) grid[r][c] = grid[r - 1][c];
+  grid[0][c] = 0;
+}
+
+// After placing at (row, c), cascade merges: down first, then left, then right.
+// The merged result always stays at the "active" position (the newly placed/merged tile).
+// For horizontal merges the result stays in column c (the new tile's column).
+function mergeAt(row, c) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const val = grid[row][c];
+    if (!val) break;
+
+    if (row + 1 < ROWS && grid[row + 1][c] === val) {
+      // Merge downward: result sinks to row+1
+      score += val * 2;
+      grid[row + 1][c] = val * 2;
+      grid[row][c] = 0;
+      gravityCol(c, row);
+      row += 1;
+      changed = true;
+    } else if (c - 1 >= 0 && grid[row][c - 1] === val) {
+      // Merge left neighbour into current column
+      score += val * 2;
+      grid[row][c] = val * 2;
+      grid[row][c - 1] = 0;
+      gravityCol(c - 1, row);
+      changed = true;
+    } else if (c + 1 < COLS && grid[row][c + 1] === val) {
+      // Merge right neighbour into current column
+      score += val * 2;
+      grid[row][c] = val * 2;
+      grid[row][c + 1] = 0;
+      gravityCol(c + 1, row);
+      changed = true;
+    }
+  }
+}
+
+function render() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent  = best;
+
+  const nextEl = document.getElementById('next-tile');
+  nextEl.textContent       = next;
+  nextEl.style.background  = tileColor(next);
+
+  const ghost = landingRow(col); // row where current tile will land
+
+  // Drop row
+  const dropRow = document.getElementById('drop-row');
+  dropRow.innerHTML = '';
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'drop-cell';
+    if (c === col) {
+      if (landingRow(c) === -1) {
+        cell.className += ' full';
+        cell.textContent = current;
+        cell.style.background = tileColor(current);
+      } else {
+        cell.textContent = current;
+        cell.style.background = tileColor(current);
+      }
+    } else {
+      cell.className += ' empty';
+    }
+    dropRow.appendChild(cell);
+  }
+
+  // Grid
+  const gridEl = document.getElementById('grid');
+  gridEl.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      const isGhost = (c === col && r === ghost && grid[r][c] === 0);
+      const isColHL = (c === col && !isGhost && grid[r][c] === 0);
+      cell.className = 'cell' + (isGhost ? ' ghost col-hl' : isColHL ? ' col-hl' : '');
+
+      if (isGhost) {
+        cell.textContent      = current;
+        cell.style.background = tileColor(current);
+      } else {
+        const val = grid[r][c];
+        if (val) {
+          cell.textContent      = val;
+          cell.style.background = tileColor(val);
+        }
+      }
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')                    { col = Math.max(0, col - 1);           render(); e.preventDefault(); }
+  else if (e.key === 'ArrowRight')              { col = Math.min(COLS - 1, col + 1);    render(); e.preventDefault(); }
+  else if (e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); drop(); }
+});
+
+// Touch: horizontal swipe = move, vertical swipe down / tap = drop
+let touch0 = null;
+document.addEventListener('touchstart', e => { touch0 = e.touches[0]; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!touch0) return;
+  const dx = e.changedTouches[0].clientX - touch0.clientX;
+  const dy = e.changedTouches[0].clientY - touch0.clientY;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (adx > ady && adx > 20)     { col = Math.max(0, Math.min(COLS - 1, col + (dx > 0 ? 1 : -1))); render(); }
+  else if (ady < 20 || dy > 20)  { drop(); }
+  touch0 = null;
+});
+
+newGame();
+</script>
+</body>
+</html>

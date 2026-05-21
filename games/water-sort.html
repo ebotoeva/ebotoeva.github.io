@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Sort Puzzle</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      color: white;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 14px;
+      letter-spacing: 3px;
+      text-shadow: 0 0 30px rgba(100, 200, 255, 0.6);
+    }
+
+    .difficulty {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .diff-btn {
+      padding: 6px 18px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.65);
+      border-radius: 20px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .diff-btn:hover { background: rgba(255,255,255,0.18); color: white; }
+    .diff-btn.active {
+      border-color: #64c8ff;
+      background: rgba(100, 200, 255, 0.2);
+      color: white;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: bold;
+      transition: transform 0.1s, filter 0.15s;
+    }
+    .btn:hover  { filter: brightness(1.12); }
+    .btn:active { transform: scale(0.96); }
+    .btn-new  { background: linear-gradient(135deg, #4caf50, #388e3c); color: white; }
+    .btn-undo { background: linear-gradient(135deg, #ff9800, #e65100); color: white; }
+    .btn-hint { background: linear-gradient(135deg, #64c8ff, #1565c0); color: white; }
+
+    #moves-display {
+      margin-bottom: 22px;
+      font-size: 1rem;
+      opacity: 0.7;
+      letter-spacing: 1px;
+    }
+
+    #game-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      max-width: 800px;
+    }
+
+    /* ── Tube ── */
+    .tube-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.22s ease;
+    }
+    .tube-wrapper.selected     { transform: translateY(-20px); }
+    .tube-wrapper.selected .tube-rim,
+    .tube-wrapper.selected .tube { border-color: #fff; box-shadow: 0 0 22px rgba(255,255,255,0.55); }
+    .tube-wrapper.complete .tube-rim,
+    .tube-wrapper.complete .tube { border-color: #4caf50; box-shadow: 0 0 18px rgba(76,175,80,0.65); }
+
+    .tube-rim {
+      width: 44px;
+      height: 7px;
+      border: 3px solid rgba(255,255,255,0.35);
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .tube {
+      width: 52px;
+      height: 212px;
+      border: 3px solid rgba(255,255,255,0.35);
+      border-top: none;
+      border-radius: 0 0 26px 26px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255,255,255,0.04);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .layer {
+      flex: 1;
+      position: relative;
+      border-bottom: 1px solid rgba(0,0,0,0.18);
+      transition: background-color 0.35s ease;
+    }
+    /* shine */
+    .layer.filled::after {
+      content: '';
+      position: absolute;
+      top: 6px; left: 7px;
+      width: 7px;
+      height: 55%;
+      background: rgba(255,255,255,0.22);
+      border-radius: 4px;
+    }
+    .layer.empty {
+      background: transparent !important;
+      border-bottom: none;
+    }
+    .layer.empty::after { display: none; }
+
+    /* ── Hint highlight ── */
+    @keyframes hint-glow {
+      from { box-shadow: 0 0 8px  var(--hint-color); }
+      to   { box-shadow: 0 0 28px var(--hint-color); }
+    }
+    .tube-wrapper.hint-from { --hint-color: rgba(255,152,0,0.85); }
+    .tube-wrapper.hint-to   { --hint-color: rgba(100,200,255,0.85); }
+    .tube-wrapper.hint-from .tube-rim,
+    .tube-wrapper.hint-from .tube {
+      border-color: #ff9800;
+      animation: hint-glow 0.55s ease infinite alternate;
+    }
+    .tube-wrapper.hint-to .tube-rim,
+    .tube-wrapper.hint-to .tube {
+      border-color: #64c8ff;
+      animation: hint-glow 0.55s ease infinite alternate;
+    }
+
+    /* ── Win overlay ── */
+    #win-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+    }
+    #win-overlay.show { display: flex; }
+
+    .win-box {
+      background: linear-gradient(135deg, #1a1a2e, #0f3460);
+      border: 2px solid #64c8ff;
+      border-radius: 24px;
+      padding: 50px 65px;
+      text-align: center;
+      animation: pop-in 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.6); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .win-box h2 { font-size: 2.4rem; color: #64c8ff; margin-bottom: 10px; }
+    .win-box p  { margin-bottom: 26px; font-size: 1.1rem; opacity: 0.85; }
+
+    #hint {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      opacity: 0.4;
+    }
+
+    /* ── Scoreboard ── */
+    #scoreboard {
+      margin-top: 28px;
+      border: 1px solid rgba(100, 200, 255, 0.25);
+      border-radius: 16px;
+      padding: 16px 24px 12px;
+      background: rgba(255,255,255,0.04);
+      min-width: 300px;
+    }
+    .scoreboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    #scoreboard h3 {
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+    .name-field {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .name-label { font-size: 0.75rem; opacity: 0.45; }
+    #player-name {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #64c8ff;
+      background: transparent;
+      border: none;
+      border-bottom: 1px dashed rgba(100, 200, 255, 0.45);
+      outline: none;
+      width: 90px;
+      padding: 1px 4px;
+      font-family: inherit;
+    }
+    #player-name::placeholder { color: rgba(100,200,255,0.3); font-weight: normal; }
+
+    /* table */
+    .sb-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .sb-table th {
+      text-align: right;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      opacity: 0.4;
+      padding: 0 6px 6px;
+      font-weight: normal;
+    }
+    .sb-table th:first-child { text-align: left; }
+    .sb-table td {
+      padding: 5px 6px;
+      text-align: right;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.5);
+    }
+    .sb-table td:first-child { text-align: left; }
+    .sb-table tr.me td { color: white; }
+    .sb-table td.player-cell { font-weight: bold; color: #64c8ff; }
+    .sb-table tr.me td.player-cell { color: #64c8ff; }
+    .sb-table td.best { color: #f1c40f; }
+    .sb-table tr.me td.best { color: #f1c40f; }
+    .sb-table td.dash { opacity: 0.25; }
+    .new-best-badge {
+      display: none;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #f1c40f;
+      margin-top: 4px;
+      animation: pulse 0.6s ease infinite alternate;
+    }
+    @keyframes pulse {
+      from { opacity: 0.7; transform: scale(1); }
+      to   { opacity: 1;   transform: scale(1.08); }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Water Sort</h1>
+
+<div class="difficulty">
+  <button class="diff-btn active" onclick="setDifficulty(this, 4)">Easy</button>
+  <button class="diff-btn"        onclick="setDifficulty(this, 6)">Medium</button>
+  <button class="diff-btn"        onclick="setDifficulty(this, 8)">Hard</button>
+</div>
+
+<div class="controls">
+  <button class="btn btn-new"  onclick="newGame()">New Game</button>
+  <button class="btn btn-undo" onclick="undo()">Undo</button>
+  <button class="btn btn-hint" onclick="showHint()">Hint</button>
+</div>
+
+<div id="moves-display">Moves: <span id="moves">0</span></div>
+<div id="game-area"></div>
+<div id="hint">Tap a tube to select · tap another to pour</div>
+
+<div id="scoreboard">
+  <div class="scoreboard-header">
+    <h3>Scoreboard</h3>
+    <div class="name-field">
+      <span class="name-label">Playing as</span>
+      <input id="player-name" type="text" maxlength="16" placeholder="Your name" spellcheck="false">
+    </div>
+  </div>
+  <table class="sb-table">
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Easy</th>
+        <th>Medium</th>
+        <th>Hard</th>
+      </tr>
+    </thead>
+    <tbody id="score-rows"></tbody>
+  </table>
+</div>
+
+<div id="win-overlay">
+  <div class="win-box">
+    <h2>Solved!</h2>
+    <p>Completed in <span id="win-moves"></span> moves</p>
+    <div class="new-best-badge" id="new-best-badge">New Best!</div>
+    <br>
+    <button class="btn btn-new" onclick="newGame()">Play Again</button>
+  </div>
+</div>
+
+<script>
+  const CAPACITY = 4;
+  const SCORE_KEY = 'waterSortScores';
+  const NAME_KEY  = 'waterSortName';
+
+  // ── Player name ────────────────────────────────────────────
+
+  function initNameInput() {
+    const input = document.getElementById('player-name');
+    input.value = localStorage.getItem(NAME_KEY) || '';
+    input.addEventListener('input', () => {
+      localStorage.setItem(NAME_KEY, input.value.trim());
+      renderScoreboard();
+    });
+    // dismiss keyboard on Enter (helpful on iPad)
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+  }
+
+  // ── Scoreboard ─────────────────────────────────────────────
+  // Storage shape: { "PlayerName": { "4": { best, played }, "6": {...}, "8": {...} } }
+
+  function loadScores() {
+    try { return JSON.parse(localStorage.getItem(SCORE_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function currentName() {
+    return (document.getElementById('player-name').value.trim()) || 'Anonymous';
+  }
+
+  function saveScore(n, movesCount) {
+    const scores = loadScores();
+    const name   = currentName();
+    if (!scores[name])    scores[name]    = {};
+    if (!scores[name][n]) scores[name][n] = { best: null, played: 0 };
+    scores[name][n].played++;
+    const isNewBest = scores[name][n].best === null || movesCount < scores[name][n].best;
+    if (isNewBest) scores[name][n].best = movesCount;
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+    return isNewBest;
+  }
+
+  function renderScoreboard() {
+    const scores  = loadScores();
+    const me      = currentName();
+    const tbody   = document.getElementById('score-rows');
+
+    // Always show current player even if they have no scores yet
+    if (!scores[me]) scores[me] = {};
+
+    // Sort: current player first, then by Easy best score
+    const players = Object.keys(scores).sort((a, b) => {
+      if (a === me) return -1;
+      if (b === me) return  1;
+      const aB = scores[a][4]?.best ?? Infinity;
+      const bB = scores[b][4]?.best ?? Infinity;
+      return aB - bB;
+    });
+
+    tbody.innerHTML = '';
+    players.forEach(name => {
+      const tr = document.createElement('tr');
+      if (name === me) tr.className = 'me';
+
+      const tdName = document.createElement('td');
+      tdName.className = 'player-cell';
+      tdName.textContent = name;
+      tr.appendChild(tdName);
+
+      [4, 6, 8].forEach(n => {
+        const td   = document.createElement('td');
+        const data = scores[name][n];
+        if (data && data.best !== null) {
+          td.textContent = data.best;
+          td.className   = 'best';
+        } else {
+          td.textContent = '—';
+          td.className   = 'dash';
+        }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  const PALETTE = [
+    '#e74c3c', // red
+    '#3498db', // blue
+    '#2ecc71', // green
+    '#f1c40f', // yellow
+    '#e67e22', // orange
+    '#9b59b6', // purple
+    '#e91e8c', // pink
+    '#1abc9c', // teal
+  ];
+
+  let tubes     = [];
+  let selected  = null;
+  let moves     = 0;
+  let history   = [];
+  let numColors = 4;
+  let hintFrom  = null;
+  let hintTo    = null;
+  let hintTimer = null;
+
+  // ── Helpers ────────────────────────────────────────────────
+
+  function topOf(tube) { return tube.length ? tube[tube.length - 1] : null; }
+
+  function canPour(fi, ti) {
+    if (fi === ti) return false;
+    const f = tubes[fi], t = tubes[ti];
+    if (!f.length || t.length >= CAPACITY) return false;
+    return topOf(t) === null || topOf(t) === topOf(f);
+  }
+
+  function isComplete(tube) {
+    if (!tube.length) return true;
+    if (tube.length !== CAPACITY) return false;
+    return tube.every(c => c === tube[0]);
+  }
+
+  function isWon() { return tubes.every(isComplete); }
+
+  // ── Actions ────────────────────────────────────────────────
+
+  function setDifficulty(btn, n) {
+    numColors = n;
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    newGame();
+  }
+
+  function newGame() {
+    const colors = PALETTE.slice(0, numColors);
+    let pool = [];
+    colors.forEach(c => { for (let i = 0; i < CAPACITY; i++) pool.push(c); });
+    // Fisher-Yates shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    tubes = [];
+    for (let i = 0; i < numColors; i++) tubes.push(pool.splice(0, CAPACITY));
+    tubes.push([], []); // two empty tubes
+
+    selected = null;
+    moves    = 0;
+    history  = [];
+    document.getElementById('win-overlay').classList.remove('show');
+    render();
+    renderScoreboard();
+  }
+
+  function pour(fi, ti) {
+    history.push({ tubes: tubes.map(t => [...t]), moves });
+    const f = tubes[fi], t = tubes[ti];
+    const color = topOf(f);
+    while (f.length && topOf(f) === color && t.length < CAPACITY) t.push(f.pop());
+    moves++;
+  }
+
+  function undo() {
+    if (!history.length) return;
+    const s = history.pop();
+    tubes    = s.tubes;
+    moves    = s.moves;
+    selected = null;
+    render();
+  }
+
+  // ── Hint ───────────────────────────────────────────────────
+
+  function topRunLength(tube) {
+    if (!tube.length) return 0;
+    const color = topOf(tube);
+    let n = 0;
+    for (let i = tube.length - 1; i >= 0 && tube[i] === color; i--) n++;
+    return n;
+  }
+
+  function findHint() {
+    let best = null;
+    let bestScore = -1;
+
+    for (let fi = 0; fi < tubes.length; fi++) {
+      if (!tubes[fi].length || isComplete(tubes[fi])) continue;
+      for (let ti = 0; ti < tubes.length; ti++) {
+        if (!canPour(fi, ti)) continue;
+
+        const from = tubes[fi], to = tubes[ti];
+        const color = topOf(from);
+        const run   = topRunLength(from);
+        let score   = 0;
+
+        if (to.length === 0) {
+          // Only worth pouring to empty if it separates a mixed tube
+          const hasMixBelow = from.length > run;
+          score = hasMixBelow ? 20 : 5;
+        } else {
+          // Pouring onto matching color
+          const toRun = topRunLength(to);
+          const combined = toRun + run;
+          // Completing the destination tube is top priority
+          if (combined >= CAPACITY && to.every(c => c === color)) score = 100;
+          else score = 50 + combined; // prefer moves that consolidate more
+        }
+
+        if (score > bestScore) { bestScore = score; best = { from: fi, to: ti }; }
+      }
+    }
+    return best;
+  }
+
+  function clearHint() {
+    hintFrom = hintTo = null;
+    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+    render();
+  }
+
+  function showHint() {
+    clearHint();
+    const hint = findHint();
+    if (!hint) return;
+    selected = null;
+    hintFrom = hint.from;
+    hintTo   = hint.to;
+    render();
+    hintTimer = setTimeout(clearHint, 2000);
+  }
+
+  // ── Input ──────────────────────────────────────────────────
+
+  function handleClick(idx) {
+    clearHint();
+    if (selected === null) {
+      if (tubes[idx].length && !isComplete(tubes[idx])) {
+        selected = idx;
+        render();
+      }
+    } else if (selected === idx) {
+      selected = null;
+      render();
+    } else if (canPour(selected, idx)) {
+      pour(selected, idx);
+      selected = null;
+      render();
+      if (isWon()) {
+        setTimeout(() => {
+          const isNewBest = saveScore(numColors, moves);
+          document.getElementById('win-moves').textContent = moves;
+          const badge = document.getElementById('new-best-badge');
+          badge.style.display = isNewBest ? 'block' : 'none';
+          document.getElementById('win-overlay').classList.add('show');
+          renderScoreboard();
+        }, 320);
+      }
+    } else {
+      // switch selection
+      const eligible = tubes[idx].length && !isComplete(tubes[idx]);
+      selected = eligible ? idx : null;
+      render();
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────
+
+  function render() {
+    const area = document.getElementById('game-area');
+    area.innerHTML = '';
+
+    tubes.forEach((tube, idx) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tube-wrapper';
+      if (selected === idx)               wrapper.classList.add('selected');
+      if (isComplete(tube) && tube.length) wrapper.classList.add('complete');
+      if (hintFrom === idx)               wrapper.classList.add('hint-from');
+      if (hintTo   === idx)               wrapper.classList.add('hint-to');
+      wrapper.addEventListener('click', () => handleClick(idx));
+
+      const rim = document.createElement('div');
+      rim.className = 'tube-rim';
+
+      const tubeEl = document.createElement('div');
+      tubeEl.className = 'tube';
+
+      // Build visual layers: top → bottom = empty slots, then water from top down
+      const display = [];
+      for (let i = tube.length; i < CAPACITY; i++) display.push(null);
+      for (let i = tube.length - 1; i >= 0; i--) display.push(tube[i]);
+
+      display.forEach(color => {
+        const layer = document.createElement('div');
+        layer.className = 'layer ' + (color ? 'filled' : 'empty');
+        if (color) layer.style.backgroundColor = color;
+        tubeEl.appendChild(layer);
+      });
+
+      wrapper.appendChild(rim);
+      wrapper.appendChild(tubeEl);
+      area.appendChild(wrapper);
+    });
+
+    document.getElementById('moves').textContent = moves;
+  }
+
+  initNameInput();
+  newGame();
+  renderScoreboard();
+</script>
+</body>
+</html>
