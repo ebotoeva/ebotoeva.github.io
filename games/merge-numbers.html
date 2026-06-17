@@ -39,22 +39,6 @@
 
     .game-wrap { display: flex; flex-direction: column; align-items: flex-start; }
 
-    /* Drop row sits directly above the grid */
-    .drop-row {
-      display: flex;
-      gap: 4px;
-      padding: 0 8px;
-      margin-bottom: 5px;
-    }
-    .drop-cell {
-      width: 64px; height: 64px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: 1.3rem; color: #12121f;
-    }
-    .drop-cell.empty  { background: transparent; }
-    .drop-cell.full   { background: transparent; opacity: 0.2; }
-
     .grid {
       background: #0a0a18;
       border-radius: 10px;
@@ -83,6 +67,60 @@
       padding: 10px 22px; font-size: 0.9rem; font-weight: bold; cursor: pointer;
     }
     .btn:hover { background: #f8e080; }
+    .controls { display: flex; gap: 10px; }
+
+    .main-area {
+      display: flex; gap: 28px;
+      align-items: flex-start; justify-content: center;
+      flex-wrap: wrap;
+    }
+    .game-col { display: flex; flex-direction: column; align-items: center; }
+
+    .scoreboard {
+      background: #0a0a18;
+      border-radius: 10px;
+      padding: 16px 18px;
+      min-width: 220px;
+    }
+    .scoreboard h2 {
+      font-size: 0.85rem; letter-spacing: 2px;
+      color: #f0d060; text-align: center; margin-bottom: 12px;
+    }
+    .score-list { list-style: none; counter-reset: rank; }
+    .score-list li {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 2px;
+      border-bottom: 1px solid #1c1c30;
+      font-size: 0.9rem;
+      counter-increment: rank;
+    }
+    .score-list li:last-child { border-bottom: none; }
+    .score-list li::before {
+      content: counter(rank) '.';
+      color: #666; width: 22px; text-align: right; flex-shrink: 0;
+    }
+    .score-list .nm {
+      flex: 1; color: #ccc;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .score-list .sc { color: #f0d060; font-weight: bold; }
+    .score-list li.me .nm { color: #f0d060; }
+    .score-list li.empty { color: #555; justify-content: center; }
+    .score-list li.empty::before { content: ''; width: 0; }
+
+    .name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .name-row label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+    .name-input {
+      flex: 1; min-width: 0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #1c1c30; color: #eee;
+      font-size: 0.9rem;
+    }
+    .name-input:focus { outline: none; border-color: #f0d060; }
+    .save-current { width: 100%; margin-top: 0; margin-bottom: 14px; }
+    .btn:disabled { background: #333; color: #777; cursor: default; }
 
     .overlay {
       position: fixed; inset: 0;
@@ -115,17 +153,41 @@
   </div>
 </div>
 
-<div class="game-wrap">
-  <div class="drop-row" id="drop-row"></div>
-  <div class="grid" id="grid"></div>
+<div class="main-area">
+  <div class="game-col">
+    <div class="game-wrap">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <p class="hint">Tiles fall on their own &nbsp;·&nbsp; ← → to move &nbsp;·&nbsp; tap / ↓ / Space to drop &nbsp;·&nbsp; P pause &nbsp;·&nbsp; Z undo</p>
+    <div class="controls">
+      <button class="btn" id="undo-btn" onclick="undo()">Undo</button>
+      <button class="btn" id="pause-btn" onclick="togglePause()">Pause</button>
+      <button class="btn" onclick="newGame()">New Game</button>
+    </div>
+  </div>
+
+  <div class="scoreboard">
+    <h2>HIGH SCORES</h2>
+    <div class="name-row">
+      <label for="player-name">Player</label>
+      <input id="player-name" class="name-input" placeholder="Your name" maxlength="12" autocomplete="off">
+    </div>
+    <button class="btn save-current" id="save-current" onclick="saveScore()">Save Score</button>
+    <ol class="score-list" id="scores"></ol>
+  </div>
 </div>
 
-<p class="hint">← → to move &nbsp;·&nbsp; ↓ or Space to drop</p>
-<button class="btn" onclick="newGame()">New Game</button>
+<div class="overlay hidden" id="pause-overlay">
+  <div class="msg">Paused</div>
+  <button class="btn" onclick="togglePause()">Resume</button>
+</div>
 
 <div class="overlay hidden" id="overlay">
   <div class="msg">Game Over!</div>
   <div class="sub" id="final-score"></div>
+  <button class="btn" id="save-btn" onclick="saveScore()">Save Score</button>
+  <button class="btn" onclick="undo()">Undo Last Move</button>
   <button class="btn" onclick="newGame()">Play Again</button>
 </div>
 
@@ -144,7 +206,9 @@ function tileColor(val) {
   return map[val] ?? `hsl(${(Math.log2(val) * 40) % 360},70%,60%)`;
 }
 
-let grid, current, next, col, score, best = 0;
+let grid, current, next, col, fallRow, score, best = 0;
+let fallTimer = null, playing = false, paused = false, resolving = false;
+let lastState = null; // snapshot for undoing the last locked move
 
 function rand() { return POOL[Math.floor(Math.random() * POOL.length)]; }
 
@@ -153,9 +217,18 @@ function newGame() {
   current = rand();
   next    = rand();
   col     = Math.floor(COLS / 2);
+  fallRow = 0;
   score   = 0;
+  lastSavedScore = -1;
+  playing = true;
+  paused = false;
+  resolving = false;
+  lastState = null;
   document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('pause-overlay').classList.add('hidden');
+  document.getElementById('pause-btn').textContent = 'Pause';
   render();
+  resetTimer();
 }
 
 // Returns the row index where the current tile would land in column c (-1 if full).
@@ -165,110 +238,226 @@ function landingRow(c) {
   return -1;
 }
 
-function drop() {
-  const row = landingRow(col);
-  if (row === -1) return; // column full — user must pick another
+function canMoveTo(r, c) {
+  return r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === 0;
+}
 
-  grid[row][col] = current;
-  mergeAt(row, col);
+// Milliseconds per downward step — starts gentle and eases a little every 1000 points.
+function fallDelay() {
+  return Math.max(450, 1300 - Math.floor(score / 1000) * 50);
+}
 
-  current = next;
-  next    = rand();
-  col     = Math.floor(COLS / 2);
-  best    = Math.max(best, score);
+function resetTimer() {
+  clearTimeout(fallTimer);
+  if (playing && !paused && !resolving) fallTimer = setTimeout(tick, fallDelay());
+}
 
-  render();
-
-  if (grid[0].every(v => v !== 0)) {
-    document.getElementById('final-score').textContent = `Final score: ${score}`;
-    document.getElementById('overlay').classList.remove('hidden');
+// One fall tick: drop a row, or lock and resolve the board if it can't fall further.
+async function tick() {
+  if (!playing || paused || resolving) return;
+  if (canMoveTo(fallRow + 1, col)) {
+    fallRow++;
+    render();
+    resetTimer();
+  } else {
+    await lockTile();
   }
 }
 
-// Shift the column above clearedRow down by one (fill the gap left by a merge).
-function gravityCol(c, clearedRow) {
-  for (let r = clearedRow; r > 0; r--) grid[r][c] = grid[r - 1][c];
-  grid[0][c] = 0;
+async function lockTile() {
+  // Snapshot the board as it was before this tile lands, so the move can be undone.
+  lastState = { grid: grid.map(row => row.slice()), score, current, next };
+
+  resolving = true;
+  clearTimeout(fallTimer);
+  grid[fallRow][col] = current;
+  render();
+
+  await animateSettle(col); // watchable cascade of merges
+
+  if (score > best) { best = score; saveBest(); }
+  resolving = false;
+  spawnTile();
+  render();
+  resetTimer(); // resume falling (no-op if the game just ended)
 }
 
-// After placing at (row, c), cascade merges: down first, then left, then right.
-// The merged result always stays at the "active" position (the newly placed/merged tile).
-// For horizontal merges the result stays in column c (the new tile's column).
-function mergeAt(row, c) {
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const val = grid[row][c];
-    if (!val) break;
+function spawnTile() {
+  current = next;
+  next    = rand();
+  col     = Math.floor(COLS / 2);
+  fallRow = 0;
+  if (!canMoveTo(fallRow, col)) endGame(); // no room for a new tile
+}
 
-    if (row + 1 < ROWS && grid[row + 1][c] === val) {
-      // Merge downward: result sinks to row+1
-      score += val * 2;
-      grid[row + 1][c] = val * 2;
-      grid[row][c] = 0;
-      gravityCol(c, row);
-      row += 1;
-      changed = true;
-    } else if (c - 1 >= 0 && grid[row][c - 1] === val) {
-      // Merge left neighbour into current column
-      score += val * 2;
-      grid[row][c] = val * 2;
-      grid[row][c - 1] = 0;
-      gravityCol(c - 1, row);
-      changed = true;
-    } else if (c + 1 < COLS && grid[row][c + 1] === val) {
-      // Merge right neighbour into current column
-      score += val * 2;
-      grid[row][c] = val * 2;
-      grid[row][c + 1] = 0;
-      gravityCol(c + 1, row);
-      changed = true;
+function endGame() {
+  playing = false;
+  clearTimeout(fallTimer);
+  gameOver();
+}
+
+function moveSide(dir) {
+  if (playing && !paused && !resolving && canMoveTo(fallRow, col + dir)) { col += dir; render(); }
+}
+
+async function hardDrop() {
+  if (!playing || paused || resolving) return;
+  while (canMoveTo(fallRow + 1, col)) fallRow++;
+  await lockTile();
+}
+
+function togglePause() {
+  if (!playing || resolving) return; // can't pause mid-cascade
+  paused = !paused;
+  document.getElementById('pause-btn').textContent = paused ? 'Resume' : 'Pause';
+  document.getElementById('pause-overlay').classList.toggle('hidden', !paused);
+  if (paused) clearTimeout(fallTimer);
+  else resetTimer();
+}
+
+function updateUndoButton() {
+  const btn = document.getElementById('undo-btn');
+  if (btn) btn.disabled = (!lastState || resolving);
+}
+
+// Restore the board to just before the last locked move, reviving the game if that
+// move ended it. Single-level: the snapshot is consumed, so you can't undo twice.
+function undo() {
+  if (!lastState || resolving) return;
+
+  grid    = lastState.grid.map(row => row.slice());
+  score   = lastState.score;
+  current = lastState.current;
+  next    = lastState.next;
+  col     = Math.floor(COLS / 2);
+  fallRow = 0;
+  lastState = null;
+
+  playing = true;
+  paused  = false;
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('pause-overlay').classList.add('hidden');
+  document.getElementById('pause-btn').textContent = 'Pause';
+
+  render();
+  resetTimer();
+}
+
+// Collect the orthogonally-connected group of cells sharing value `v`, starting at (sr, sc).
+function connectedGroup(sr, sc, v) {
+  const seen = new Set();
+  const stack = [[sr, sc]];
+  const group = [];
+  while (stack.length) {
+    const [r, c] = stack.pop();
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+    const key = r * COLS + c;
+    if (seen.has(key) || grid[r][c] !== v) continue;
+    seen.add(key);
+    group.push([r, c]);
+    stack.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
+  }
+  return group;
+}
+
+// Compact every column downward so tiles rest on the floor with no gaps.
+function applyGravity() {
+  for (let c = 0; c < COLS; c++) {
+    const stack = [];
+    for (let r = ROWS - 1; r >= 0; r--) if (grid[r][c]) stack.push(grid[r][c]);
+    for (let r = ROWS - 1; r >= 0; r--) grid[r][c] = stack[ROWS - 1 - r] || 0;
+  }
+}
+
+// Choose where a merged group's result lands: the lowest cell in the active column
+// if the group touches it (keeps the result under the dropped tile), otherwise the
+// lowest cell overall (leftmost on a tie) so it sinks naturally.
+function pickAnchor(group, activeCol) {
+  let inCol = null;
+  for (const cell of group)
+    if (cell[1] === activeCol && (!inCol || cell[0] > inCol[0])) inCol = cell;
+  if (inCol) return inCol;
+
+  let anchor = group[0];
+  for (const cell of group)
+    if (cell[0] > anchor[0] || (cell[0] === anchor[0] && cell[1] < anchor[1])) anchor = cell;
+  return anchor;
+}
+
+// Scan the board for every connected group of k same-valued tiles (any direction,
+// transitively) that can merge. Groups are taken from a single grid snapshot — each
+// cell is claimed once — so a result placed this round can't re-merge until the next.
+// A group becomes one tile worth v * 2^(k-1): two tiles double, each extra doubles
+// again, so the more tiles join, the higher the power (not just the sum). `activeCol`
+// is the dropped column; a group touching it keeps its result there.
+function findMerges(activeCol) {
+  const claimed = new Set();
+  const merges = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      if (!v || claimed.has(r * COLS + c)) continue;
+
+      const group = connectedGroup(r, c, v);
+      for (const [gr, gc] of group) claimed.add(gr * COLS + gc);
+      if (group.length < 2) continue;
+
+      merges.push({ group, anchor: pickAnchor(group, activeCol), result: v * Math.pow(2, group.length - 1) });
     }
+  }
+  return merges;
+}
+
+function applyMerges(merges) {
+  for (const m of merges) {
+    score += m.result;
+    for (const [gr, gc] of m.group) grid[gr][gc] = 0;
+    grid[m.anchor[0]][m.anchor[1]] = m.result;
+  }
+}
+
+const STEP_MS = 200;
+function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+// Resolve the board one visible step at a time so cascades are watchable: combine a
+// round of groups, pause, let gravity pull tiles into the gaps, pause, then repeat
+// until nothing else can merge. Runs while `resolving` is true (fall + input locked).
+async function animateSettle(activeCol) {
+  applyGravity();
+  render();
+  let merges = findMerges(activeCol);
+  while (merges.length) {
+    await sleep(STEP_MS);
+    applyMerges(merges); render();   // tiles combine
+    await sleep(STEP_MS);
+    applyGravity(); render();        // tiles fall into the gaps
+    merges = findMerges(activeCol);
   }
 }
 
 function render() {
   document.getElementById('score').textContent = score;
   document.getElementById('best').textContent  = best;
+  updateSaveButtons();
+  updateUndoButton();
 
   const nextEl = document.getElementById('next-tile');
   nextEl.textContent       = next;
   nextEl.style.background  = tileColor(next);
 
-  const ghost = landingRow(col); // row where current tile will land
+  const ghostRow = landingRow(col); // where the falling tile would come to rest
 
-  // Drop row
-  const dropRow = document.getElementById('drop-row');
-  dropRow.innerHTML = '';
-  for (let c = 0; c < COLS; c++) {
-    const cell = document.createElement('div');
-    cell.className = 'drop-cell';
-    if (c === col) {
-      if (landingRow(c) === -1) {
-        cell.className += ' full';
-        cell.textContent = current;
-        cell.style.background = tileColor(current);
-      } else {
-        cell.textContent = current;
-        cell.style.background = tileColor(current);
-      }
-    } else {
-      cell.className += ' empty';
-    }
-    dropRow.appendChild(cell);
-  }
-
-  // Grid
   const gridEl = document.getElementById('grid');
   gridEl.innerHTML = '';
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = document.createElement('div');
-      const isGhost = (c === col && r === ghost && grid[r][c] === 0);
-      const isColHL = (c === col && !isGhost && grid[r][c] === 0);
+      const isLive  = (playing && !resolving && c === col && r === fallRow);
+      const isGhost = (playing && !resolving && c === col && r === ghostRow && r !== fallRow && grid[r][c] === 0);
+      const isColHL = (c === col && grid[r][c] === 0 && !isLive && !isGhost);
       cell.className = 'cell' + (isGhost ? ' ghost col-hl' : isColHL ? ' col-hl' : '');
 
-      if (isGhost) {
+      if (isLive || isGhost) {
         cell.textContent      = current;
         cell.style.background = tileColor(current);
       } else {
@@ -285,24 +474,111 @@ function render() {
 
 // Keyboard
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft')                    { col = Math.max(0, col - 1);           render(); e.preventDefault(); }
-  else if (e.key === 'ArrowRight')              { col = Math.min(COLS - 1, col + 1);    render(); e.preventDefault(); }
-  else if (e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); drop(); }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return; // don't hijack the name field / buttons
+  if (e.key === 'ArrowLeft')       { moveSide(-1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight') { moveSide(1);  e.preventDefault(); }
+  else if (e.key === 'ArrowDown' || e.key === ' ') { hardDrop(); e.preventDefault(); }
+  else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { togglePause(); e.preventDefault(); }
+  else if (e.key === 'z' || e.key === 'Z') { undo(); e.preventDefault(); }
 });
 
-// Touch: horizontal swipe = move, vertical swipe down / tap = drop
+// Touch: horizontal swipe = move, tap (or any non-horizontal flick) = drop
 let touch0 = null;
-document.addEventListener('touchstart', e => { touch0 = e.touches[0]; }, { passive: true });
+document.addEventListener('touchstart', e => {
+  // ignore touches that start on the controls (name field, buttons)
+  touch0 = e.target.closest('input, button') ? null : e.touches[0];
+}, { passive: true });
 document.addEventListener('touchend', e => {
   if (!touch0) return;
   const dx = e.changedTouches[0].clientX - touch0.clientX;
   const dy = e.changedTouches[0].clientY - touch0.clientY;
-  const adx = Math.abs(dx), ady = Math.abs(dy);
-  if (adx > ady && adx > 20)     { col = Math.max(0, Math.min(COLS - 1, col + (dx > 0 ? 1 : -1))); render(); }
-  else if (ady < 20 || dy > 20)  { drop(); }
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) moveSide(dx > 0 ? 1 : -1);
+  else                                                  hardDrop();
   touch0 = null;
 });
 
+// ---- Leaderboard (persisted in localStorage) ----
+const LS_SCORES = 'numberDrop.scores';
+const LS_BEST   = 'numberDrop.best';
+const LS_NAME   = 'numberDrop.name';
+const MAX_SCORES = 10;
+
+function lsGet(key)        { try { return localStorage.getItem(key); }        catch { return null; } }
+function lsSet(key, val)   { try { localStorage.setItem(key, val); }          catch {} }
+
+function loadScores()      { try { return JSON.parse(lsGet(LS_SCORES)) || []; } catch { return []; } }
+function loadBest()        { return Number(lsGet(LS_BEST)) || 0; }
+function saveBest()        { lsSet(LS_BEST, String(best)); }
+
+let lastSavedIndex = -1; // row to highlight after a save
+let lastSavedScore = -1; // last score banked, to block duplicate saves
+
+// Enable the Save buttons only when there's a fresh, non-zero score to bank.
+function updateSaveButtons() {
+  const canSave = (score > 0 && score !== lastSavedScore);
+  for (const id of ['save-current', 'save-btn']) {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = !canSave;
+  }
+}
+
+function renderScores() {
+  const list = loadScores();
+  const ol = document.getElementById('scores');
+  ol.innerHTML = '';
+
+  if (!list.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'No scores yet';
+    ol.appendChild(li);
+    return;
+  }
+
+  list.forEach((entry, i) => {
+    const li = document.createElement('li');
+    if (i === lastSavedIndex) li.className = 'me';
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = entry.name;
+    const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = entry.score;
+    li.append(nm, sc);
+    ol.appendChild(li);
+  });
+}
+
+function saveScore() {
+  if (score <= 0 || score === lastSavedScore) return; // nothing new to bank
+
+  const input = document.getElementById('player-name');
+  const name  = (input.value.trim() || 'Player').slice(0, 12);
+  lsSet(LS_NAME, name);
+
+  const list = loadScores();
+  const entry = { name, score };
+  list.push(entry);
+  list.sort((a, b) => b.score - a.score);
+  if (list.length > MAX_SCORES) list.length = MAX_SCORES;
+
+  lastSavedIndex = list.indexOf(entry);
+  lastSavedScore = score;
+  lsSet(LS_SCORES, JSON.stringify(list));
+  renderScores();
+  updateSaveButtons();
+}
+
+function gameOver() {
+  document.getElementById('final-score').textContent = `Final score: ${score}`;
+  updateSaveButtons();
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+const nameInput = document.getElementById('player-name');
+nameInput.addEventListener('input', () => lsSet(LS_NAME, nameInput.value.trim().slice(0, 12)));
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameInput.blur(); });
+
+// ---- Boot ----
+best = loadBest();
+nameInput.value = lsGet(LS_NAME) || '';
+renderScores();
 newGame();
 </script>
 </body>
