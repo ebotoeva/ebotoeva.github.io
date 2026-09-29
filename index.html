@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-  <head>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Elena Botoeva's Academic Page</title>
@@ -16,25 +16,25 @@
     }
 
     body {
-	font-family: Arial, sans-serif;
-	/*background-image: linear-gradient(160deg, darkblue, blue);*/
+      font-family: Arial, sans-serif;
+      /*background-image: linear-gradient(160deg, darkblue, blue);*/
     }
 
     #night-sky {
-	position: fixed;
-	height: 100%;
-	width: 100%;
-	z-index: -1;
+      position: fixed;
+      height: 100%;
+      width: 100%;
+      z-index: -1;
     }
 
     p {
-	margin: 0.5rem 0 1rem;
+      margin: 0.5rem 0 1rem;
     }
 
     ul {
-	padding: 0 20px;
+      padding: 0 20px;
     }
-    
+
     .container {
       display: flex;
       max-width: 1200px;
@@ -42,6 +42,34 @@
       margin: 0 auto;
       /*border-width: 0 1px;
       border-color: #666;*/
+    }
+
+    .about-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 50px;
+    }
+
+    #about {
+      margin-bottom: 0;
+    }
+
+    .profile-photo {
+      width: 25%;
+      min-width: 150px;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      overflow: hidden;     /* clips the image to this square/circle */
+    }
+
+    .square-img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.5);
+      transform-origin: 50% 35%;        /* the point that stays fixed while zooming */
     }
 
     .sidebar {
@@ -61,15 +89,15 @@
     }
 
     .sidebar a:hover {
-	color: black;
-	font-weight: bolder;
+      color: black;
+      font-weight: bolder;
     }
 
     .main {
-	padding: 20px;
-	margin-left: 200px;
-	background: white;
-	opacity: 0.95;
+      padding: 20px;
+      margin-left: 200px;
+      background: white;
+      opacity: 0.95;
     }
 
     section {
@@ -88,10 +116,10 @@
     }
 
     .publication-type {
-	margin: 1em 0 0.5em;
-	font-style: italic;
-	font-size: larger;
-	color: #444;
+      margin: 1em 0 0.5em;
+      font-style: italic;
+      font-size: larger;
+      color: #444;
     }
 
     @media (max-width: 768px) {
@@ -124,34 +152,34 @@
 
 <body onLoad="setup()">
   <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-  
+
   <svg id="night-sky">
     <defs>
       <linearGradient id="VerticalGradient1" x1="0" x2="0" y1="0" y2="1">
-	<stop offset="0%" stop-color="darkblue" />
-	<stop offset="95%" stop-color="white" />
-	<stop offset="100%" stop-color="lightyellow" />
+        <stop offset="0%" stop-color="darkblue" />
+        <stop offset="95%" stop-color="white" />
+        <stop offset="100%" stop-color="lightyellow" />
       </linearGradient>
       <linearGradient id="VerticalGradient2" x1="0" x2="0" y1="0" y2="1">
-	<stop offset="0%" stop-color="lightyellow" />
-	<stop offset="100%" stop-color="red" />
+        <stop offset="0%" stop-color="lightyellow" />
+        <stop offset="100%" stop-color="red" />
       </linearGradient>
       <radialGradient id="RadialGradient">
-	<stop offset="0%" stop-color="lightyellow" />
-	<stop offset="100%" style="stop-color:white;stop-opacity:0" />
+        <stop offset="0%" stop-color="lightyellow" />
+        <stop offset="100%" style="stop-color:white;stop-opacity:0" />
       </radialGradient>
       <radialGradient id="WindowGradient">
-	<stop offset="0%" stop-color="yellow" />
-	<stop offset="100%" stop-color="white" />
+        <stop offset="0%" stop-color="yellow" />
+        <stop offset="100%" stop-color="white" />
       </radialGradient>
     </defs>
 
     <rect x="0" y="0" width="100%" height="76%" fill="url(#VerticalGradient1)" />
-    <rect x="0" y="76%" width="100%" height="16%" fill="url(#VerticalGradient2)" />  
+    <rect x="0" y="76%" width="100%" height="16%" fill="url(#VerticalGradient2)" />
     <rect x="0" y="82%" width="100%" height="20%" fill="black" />
   </svg>
 
-  
+
   <div class="container">
     <div class="sidebar" id="sidebar">
       <h2>Dr Elena Botoeva</h2>
@@ -164,224 +192,237 @@
       <a href="#publications" onclick="toggleSidebar()">Publications</a>
     </div>
 
-    
+
     <div class="main">
-      <section id="about">
-        <h2>About Me</h2>
-        <p>I am a Lecturer at the School of Computing, University of Kent.</p>
-        <p>I previously worked at Imperial College London with Alessio Lomuscio and at Free University of Bozen-Bolzano with Diego Calvanese.</p>
+      <div class="about-row">
+        <section id="about">
+          <h2>About Me</h2>
+          <p>I am a Lecturer at the School of Computing, University of Kent.</p>
+          <p>I previously worked at Imperial College London with Alessio Lomuscio and at Free University of
+            Bozen-Bolzano
+            with Diego Calvanese.</p>
+          <p><strong>Office:</strong> Room 228, Kennedy Building, University of Kent, Canterbury, CT2 7FS</p>
+          <p><strong>E-mail:</strong> e.[lastname]@kent.ac.uk</p>
+        </section>
+        <div class="profile-photo">
+          <img class="square-img" src="elena.jpg" alt="Elena Botoeva" />
+        </div>
+      </div>
 
-	<p><strong>Office:</strong> Room 228, Kennedy Building, University of Kent, Canterbury, CT2 7FS</p>
-	
-	<p><strong>E-mail:</strong> e.[lastname]@kent.ac.uk</p>
-      </section>
-
-      
       <section id="research">
         <h2>Research</h2>
         <p>My current research interests include:</p>
-	  <ul>
-	    <li>verification of  AI systems, including multi-agent closed-loop/reactive systems.</li>
-	    <li>query languages for JSON document databases, nested data, MongoDB</li>
-	    <li>data access and integration with Knowledge Graphs</li>
-	    <li>machine learning for combinatorial optimisation</li>
-	    <li>integration of neural and symbolic AI</li>
-	    <li>explainable AI</li>
-	  </ul>
+        <ul>
+          <li>verification of AI systems, including multi-agent closed-loop/reactive systems.</li>
+          <li>query languages for JSON document databases, nested data, MongoDB</li>
+          <li>data access and integration with Knowledge Graphs</li>
+          <li>machine learning for combinatorial optimisation</li>
+          <li>integration of neural and symbolic AI</li>
+          <li>explainable AI</li>
+        </ul>
       </section>
 
-      
+
       <section id="projects">
         <h2>Projects</h2>
         <p>My current funded projects:</p>
-	  <ul>
-	    <li>BRanchIng Game HeurisTics for Verification of Neural Networks (BRIGHT), Funded by EPSRC. Postdoc: <a href="https://maxpeeperkorn.nl/">Max Peeperkorn</a></li>
-	  </ul>
+        <ul>
+          <li>BRanchIng Game HeurisTics for Verification of Neural Networks (BRIGHT), Funded by EPSRC. Postdoc: <a
+              href="https://maxpeeperkorn.nl/">Max Peeperkorn</a></li>
+        </ul>
       </section>
 
       <section id="phd-students">
         <h2>PhD Students</h2>
         <p>My current PhD students:</p>
-	  <ul>
-	    <li><a href="https://www.linkedin.com/in/zahra-dehghanipour/">Zahra Dehghanipour</a>, supervised jointly with <a href="https://akoliousis.com/">Alexandros Koliousis</a>.</li>
-	    <li><a href="https://www.linkedin.com/in/arooj-butt-613910219/">Arooj Arif</a>, supervised jointly with <a href="https://akoliousis.com/">Alexandros Koliousis</a>.</li>
-	    <li><a href="Mehrdad Rafiepour">Mehrdad Rafiepour</a>, supervised jointly with <a href="https://akoliousis.com/">Alexandros Koliousis</a>.</li>
-	  </ul>
+        <ul>
+          <li><a href="https://www.linkedin.com/in/zahra-dehghanipour/">Zahra Dehghanipour</a>, supervised jointly with
+            <a href="https://akoliousis.com/">Alexandros Koliousis</a>.
+          </li>
+          <li><a href="https://www.linkedin.com/in/arooj-butt-613910219/">Arooj Arif</a>, supervised jointly with <a
+              href="https://akoliousis.com/">Alexandros Koliousis</a>.</li>
+          <li><a href="Mehrdad Rafiepour">Mehrdad Rafiepour</a>, supervised jointly with <a
+              href="https://akoliousis.com/">Alexandros Koliousis</a>.</li>
+        </ul>
       </section>
 
-      
+
       <section id="teaching">
         <h2>Teaching</h2>
         <p>The modules I teach/taught at Kent:</p>
-	  <ul>
-	    <li><strong>2022 - now</strong> Semantic technologies and Graph Analytics</li>
-	    <li><strong>2022 - now</strong> Fundamentals of Web Development (previously, An Introduction to Programming and Web Technologies)</li>
-	    <li><strong>2021 - 2024</strong> Introduction to Artificial Intelligence</li>
-	  </ul>
+        <ul>
+          <li><strong>2022 - now</strong> Semantic technologies and Graph Analytics</li>
+          <li><strong>2022 - now</strong> Fundamentals of Web Development (previously, An Introduction to Programming
+            and Web Technologies)</li>
+          <li><strong>2021 - 2024</strong> Introduction to Artificial Intelligence</li>
+        </ul>
       </section>
 
-      
+
       <section id="community">
         <h2>Community</h2>
         <p>I have served as:</p>
-	  <ul>
-	    <li>PC member for KR (2025, 2023, 2022, 2020), AAAI (2024,
-2020), AAMAS (2020), ECAI (2020), FoIKS (2026, 2024), ICDT (2019), IJCAI
-(2019, 2018, 2016), AMW (2017–2019), RR (2016), Description Logics
-Workshop (2025, 2023, 2015–2020)</li>
-	    <li>Workshop and Tutorials Chair of KR 2024</li>
-	    <li>Publicity Chair of KR 2022</li>
-	  </ul>
+        <ul>
+          <li>PC member for KR (2025, 2023, 2022, 2020), AAAI (2024,
+            2020), AAMAS (2020), ECAI (2020), FoIKS (2026, 2024), ICDT (2019), IJCAI
+            (2019, 2018, 2016), AMW (2017–2019), RR (2016), Description Logics
+            Workshop (2025, 2023, 2015–2020)</li>
+          <li>Workshop and Tutorials Chair of KR 2024</li>
+          <li>Publicity Chair of KR 2022</li>
+        </ul>
       </section>
 
-      
+
       <section id="publications">
         <h2>Publications</h2>
-        <p>For my most up to date publications, see my <a href="https://dblp.uni-trier.de/pid/97/8420.html">DBLP</a> page.</p>
+        <p>For my most up to date publications, see my <a href="https://dblp.uni-trier.de/pid/97/8420.html">DBLP</a>
+          page.</p>
 
-	
-	<div id="bibtex_display"></div>
 
-	<div class="bibtex_template">
-	  <ul>
-	    <li class="if author" style="font-weight: normal;">
-	      <span class="author"></span>.
-	      <span class="title" style="font-weight: bold;"></span>.
-	      <span class="if journal"><em><span class="journal"></span></em>,</span>
+        <div id="bibtex_display"></div>
+
+        <div class="bibtex_template">
+          <ul>
+            <li class="if author" style="font-weight: normal;">
+              <span class="author"></span>.
+              <span class="title" style="font-weight: bold;"></span>.
+              <span class="if journal"><em><span class="journal"></span></em>,</span>
               <span class="if booktitle">In <em><span class="booktitle"></span></em>,</span>
               <span class="if year"><span class="year"></span>.</span>
-	      <span class="if webpdf" style="margin-left: 20px"><a class="webpdf" style="color:gray;">pdf..</a></span>
-	      <span class="if prespdf" style="margin-left: 20px"><a class="prespdf" style="color:gray;">slides..</a></span>
-	      <span class="if posterpdf" style="margin-left: 20px"><a class="posterpdf" style="color:gray;">poster..</a></span>
-	      <span class="if url"><a class="url" style="color:gray;">view online..</a></span>
-	    </li>
-	  </ul>
-	</div>
+              <span class="if webpdf" style="margin-left: 20px"><a class="webpdf" style="color:gray;">pdf..</a></span>
+              <span class="if prespdf" style="margin-left: 20px"><a class="prespdf"
+                  style="color:gray;">slides..</a></span>
+              <span class="if posterpdf" style="margin-left: 20px"><a class="posterpdf"
+                  style="color:gray;">poster..</a></span>
+              <span class="if url"><a class="url" style="color:gray;">view online..</a></span>
+            </li>
+          </ul>
+        </div>
 
-	<div class="bibtex_structure">
-	  <div class="sections bibtextypekey">
-	    <div class="section article">
-	      <div class="publication-type">Articles</div>
-	      <div class="sort year" extra="DESC number">
-		<div class="templates"></div>
-	      </div>
-	    </div>
-	    
-	    <div class="section inproceedings">
-	      <div class="publication-type">In Proceedings</div>
-	      <div class="sort year" extra="DESC number">
-		<div class="templates"></div>
-	      </div>
-	    </div>
-	    
-	    <div class="section misc|phdthesis|mastersthesis|bachelorsthesis|techreport">
-	      <div class="publication-type">Other</div>
-	      <div class="sort year" extra="DESC number">
-		<div class="templates"></div>
-	      </div>
-	    </div>
-	  </div>
-	</div>
-	
+        <div class="bibtex_structure">
+          <div class="sections bibtextypekey">
+            <div class="section article">
+              <div class="publication-type">Articles</div>
+              <div class="sort year" extra="DESC number">
+                <div class="templates"></div>
+              </div>
+            </div>
+
+            <div class="section inproceedings">
+              <div class="publication-type">In Proceedings</div>
+              <div class="sort year" extra="DESC number">
+                <div class="templates"></div>
+              </div>
+            </div>
+
+            <div class="section misc|phdthesis|mastersthesis|bachelorsthesis|techreport">
+              <div class="publication-type">Other</div>
+              <div class="sort year" extra="DESC number">
+                <div class="templates"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </div>
   </div>
-  
+
   <script>
     function toggleSidebar() {
-	document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar').classList.toggle('open');
     }
 
     function setup() {
-	createStars();
-	createBuildings();
+      createStars();
+      createBuildings();
     }
-    
+
     function createStars() {
-	var svg = document.getElementById("night-sky");
-	createStar(svg, '3%', '13%', 2);
-	createStar(svg, '5%', '15%', 1);
-	createStar(svg, '93%', '10%', 3);
+      var svg = document.getElementById("night-sky");
+      createStar(svg, '3%', '13%', 2);
+      createStar(svg, '5%', '15%', 1);
+      createStar(svg, '93%', '10%', 3);
     }
-    
+
     function createStar(svg, xcoord, ycoord, rad) {
-	var circle1 = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
-	circle1.setAttribute('cx', xcoord);
-	circle1.setAttribute('cy', ycoord);
-	circle1.setAttribute('r', (2 * rad + 1).toString());
-	circle1.setAttribute('fill', 'url(#RadialGradient)');
-	circle1.setAttribute('transition', 'all 1s');
+      var circle1 = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+      circle1.setAttribute('cx', xcoord);
+      circle1.setAttribute('cy', ycoord);
+      circle1.setAttribute('r', (2 * rad + 1).toString());
+      circle1.setAttribute('fill', 'url(#RadialGradient)');
+      circle1.setAttribute('transition', 'all 1s');
 
-	var circle2 = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
-	circle2.setAttribute('cx', xcoord);
-	circle2.setAttribute('cy', ycoord);
-	circle2.setAttribute('r', rad);
-	circle2.setAttribute('fill', 'lightyellow');
-	circle2.setAttribute('transition', 'all 1s');
+      var circle2 = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+      circle2.setAttribute('cx', xcoord);
+      circle2.setAttribute('cy', ycoord);
+      circle2.setAttribute('r', rad);
+      circle2.setAttribute('fill', 'lightyellow');
+      circle2.setAttribute('transition', 'all 1s');
 
-	svg.appendChild(circle1);
-	svg.appendChild(circle2);
+      svg.appendChild(circle1);
+      svg.appendChild(circle2);
 
-	flickerStar(circle1, circle2, 0.6);
+      flickerStar(circle1, circle2, 0.6);
     }
 
     function flickerStar(circle1, circle2, opacity) {
-	circle1.setAttribute('opacity', opacity);
-	circle2.setAttribute('opacity', opacity);
-	setTimeout(
-	    function () {flickerStar(circle1, circle2, 1-opacity)},
-	    opacity*1000 + Math.round(Math.random()*opacity*1000)
-	);
+      circle1.setAttribute('opacity', opacity);
+      circle2.setAttribute('opacity', opacity);
+      setTimeout(
+        function () { flickerStar(circle1, circle2, 1 - opacity) },
+        opacity * 1000 + Math.round(Math.random() * opacity * 1000)
+      );
     }
 
     function flickerWindow(windo, flag) {
-	if (flag) {
-	    windo.setAttribute('fill', 'yellow');
-	} else {
-	    windo.setAttribute('fill', 'url(#WindowGradient)');
-	}
-	
-	setTimeout(
-	    function () {flickerWindow(windo, 1-flag)},
-	    600 + Math.round(Math.random()*800)
-	);
+      if (flag) {
+        windo.setAttribute('fill', 'yellow');
+      } else {
+        windo.setAttribute('fill', 'url(#WindowGradient)');
+      }
+
+      setTimeout(
+        function () { flickerWindow(windo, 1 - flag) },
+        600 + Math.round(Math.random() * 800)
+      );
     }
 
     function createBuildings() {
-    	var svg = document.getElementById("night-sky");
-	createBuilding(svg, 2, 73, 9);
-	createBuilding(svg, 5, 70, 12);
-	createBuilding(svg, 8, 75, 7);
-	createBuilding(svg, 94, 76, 6);
-	createBuilding(svg, 97, 72, 10);
+      var svg = document.getElementById("night-sky");
+      createBuilding(svg, 2, 73, 9);
+      createBuilding(svg, 5, 70, 12);
+      createBuilding(svg, 8, 75, 7);
+      createBuilding(svg, 94, 76, 6);
+      createBuilding(svg, 97, 72, 10);
     }
 
     function createBuilding(svg, xcoord, ycoord, height) {
-	//<rect x="2%" y="73%" width="3%" height="9%" fill="black" />
-	var rect = document.createElementNS("http://www.w3.org/2000/svg", 'rect');
-	rect.setAttribute('x', xcoord + '%');
-	rect.setAttribute('y', ycoord + '%');
-	rect.setAttribute('width', '3%');
-	rect.setAttribute('height', height + '%');
-	rect.setAttribute('fill', 'black');
-	svg.appendChild(rect);
+      //<rect x="2%" y="73%" width="3%" height="9%" fill="black" />
+      var rect = document.createElementNS("http://www.w3.org/2000/svg", 'rect');
+      rect.setAttribute('x', xcoord + '%');
+      rect.setAttribute('y', ycoord + '%');
+      rect.setAttribute('width', '3%');
+      rect.setAttribute('height', height + '%');
+      rect.setAttribute('fill', 'black');
+      svg.appendChild(rect);
 
-	for (var i=0; i<2; i++) {
-	    for (var j=0; j<height/1.6; j++) {
-		let windo = document.createElementNS("http://www.w3.org/2000/svg", 'rect');
-		windo.setAttribute('x', xcoord + 0.6 + 1.2*i + '%');
-		windo.setAttribute('y', ycoord + 0.6 + 1.2*j + '%');
-		windo.setAttribute('width', '0.6%');
-		windo.setAttribute('height', '0.6%');
-		windo.setAttribute('fill', 'url(#WindowGradient)');
-		windo.setAttribute('transition', 'all 1s');
+      for (var i = 0; i < 2; i++) {
+        for (var j = 0; j < height / 1.6; j++) {
+          let windo = document.createElementNS("http://www.w3.org/2000/svg", 'rect');
+          windo.setAttribute('x', xcoord + 0.6 + 1.2 * i + '%');
+          windo.setAttribute('y', ycoord + 0.6 + 1.2 * j + '%');
+          windo.setAttribute('width', '0.6%');
+          windo.setAttribute('height', '0.6%');
+          windo.setAttribute('fill', 'url(#WindowGradient)');
+          windo.setAttribute('transition', 'all 1s');
 
-		svg.appendChild(windo);
-		flickerWindow(windo, 1);
-	    }
-	}
-	
+          svg.appendChild(windo);
+          flickerWindow(windo, 1);
+        }
+      }
+
 
     }
   </script>
@@ -816,4 +857,5 @@ http://arxiv.org/abs/1304.5810},
 	</textarea>
 
 </body>
+
 </html>
